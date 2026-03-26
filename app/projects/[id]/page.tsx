@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/utils/supabase/supabase';
 import { useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, LayoutTemplate, Trophy, Rocket, Code2, Images } from 'lucide-react';
+import { ArrowLeft, ExternalLink, LayoutTemplate, Trophy, Rocket, Code2, Images, X } from 'lucide-react';
 import { GithubIcon } from '@/app/page';
 
 export default function ProjectDetail() {
@@ -14,6 +14,9 @@ export default function ProjectDetail() {
   
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // STATE BARU: Menyimpan URL gambar yang sedang di-klik untuk popup
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchProject() {
@@ -36,6 +39,16 @@ export default function ProjectDetail() {
     fetchProject();
   }, [id]);
 
+  // Efek untuk mengunci scroll saat popup terbuka
+  useEffect(() => {
+    if (selectedImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [selectedImage]);
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950">
       <div className="animate-pulse flex flex-col items-center">
@@ -57,6 +70,39 @@ export default function ProjectDetail() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 selection:text-indigo-200 pb-20">
       
+      {/* --- POPUP LIGHTBOX (Hanya muncul jika ada gambar yang di-klik) --- */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedImage(null)} // Tutup popup jika area kosong di-klik
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 cursor-zoom-out"
+          >
+            {/* Tombol Tutup Silang (X) */}
+            <button 
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-6 right-6 md:top-8 md:right-8 w-12 h-12 bg-slate-900/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-full flex items-center justify-center transition-colors border border-slate-700/50 backdrop-blur-md"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Gambar Besar */}
+            <motion.img 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              src={selectedImage} 
+              alt="Gambar diperbesar" 
+              className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)]"
+              onClick={(e) => e.stopPropagation()} // Mencegah klik pada gambar menutup popup
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Navbar Minimalis */}
       <nav className="fixed top-0 left-0 w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/50">
         <div className="container mx-auto px-6 h-20 flex items-center">
@@ -113,18 +159,22 @@ export default function ProjectDetail() {
             </div>
           </motion.div>
 
-          {/* Featured Image */}
+          {/* Featured Image (Bisa diklik untuk memperbesar) */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="w-full h-64 md:h-[500px] rounded-[2rem] overflow-hidden border border-slate-700/50 shadow-2xl relative"
+            onClick={() => setSelectedImage(project.image_url)}
+            className="w-full h-64 md:h-[500px] rounded-[2rem] overflow-hidden border border-slate-700/50 shadow-2xl relative group cursor-zoom-in"
           >
             <img 
               src={project.image_url || 'https://via.placeholder.com/1920x1080'} 
               alt={project.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/20 backdrop-blur-[2px]">
+               <span className="px-4 py-2 bg-slate-900/80 text-white rounded-lg font-bold text-sm">Lihat Gambar</span>
+            </div>
           </motion.div>
         </div>
       </header>
@@ -162,17 +212,20 @@ export default function ProjectDetail() {
                 <p className="text-slate-400 mb-6">
                   Pendekatan teknis dan arsitektur infrastruktur yang kami gunakan untuk memastikan skalabilitas dan keamanan aplikasi ini:
                 </p>
-                <div className="rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 p-4 relative group cursor-pointer">
+                <div 
+                  className="rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 p-4 relative group cursor-zoom-in"
+                  onClick={() => setSelectedImage(project.architecture_diagram_url)}
+                >
                   <img 
                     src={project.architecture_diagram_url} 
                     alt="Architecture Diagram" 
-                    className="w-full h-auto rounded-xl group-hover:opacity-90 transition-opacity"
+                    className="w-full h-auto rounded-xl group-hover:opacity-60 transition-opacity"
                   />
-                  <a href={project.architecture_diagram_url} target="_blank" className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/40 backdrop-blur-sm rounded-xl">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/40 backdrop-blur-sm rounded-xl">
                     <span className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold flex items-center gap-2">
-                      <ExternalLink size={16} /> Lihat Full Resolusi
+                      <ExternalLink size={16} /> Lihat Skema Penuh
                     </span>
-                  </a>
+                  </div>
                 </div>
               </section>
             )}
@@ -188,14 +241,20 @@ export default function ProjectDetail() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {project.gallery_urls.map((url: string, index: number) => (
-                    <a href={url} target="_blank" key={index} className="rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 h-48 group block relative">
+                    <div 
+                      key={index} 
+                      onClick={() => setSelectedImage(url)}
+                      className="rounded-2xl overflow-hidden border border-slate-700/50 bg-slate-900 h-48 group block relative cursor-zoom-in"
+                    >
                       <img 
                         src={url} 
                         alt={`${project.title} screenshot ${index + 1}`} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
-                      <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-colors duration-300"></div>
-                    </a>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/40 backdrop-blur-sm">
+                        <span className="bg-slate-900/80 text-white text-xs font-bold px-3 py-1.5 rounded-md backdrop-blur-md">Perbesar</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </section>
@@ -225,7 +284,6 @@ export default function ProjectDetail() {
 
             <div className="bg-gradient-to-br from-indigo-900/20 to-violet-900/20 border border-indigo-500/20 rounded-3xl p-8 backdrop-blur-sm">
               <h3 className="text-lg font-bold text-indigo-300 mb-4">Mengapa Kami Membangun Ini?</h3>
-              {/* Ini dia implementasi teks dinamis dari kolom motivation */}
               <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-wrap">
                 {project.motivation || 'Sebagai bagian dari dedikasi tim, proyek ini dirancang khusus untuk memenuhi standar kompetisi tingkat tinggi, menitikberatkan pada performa, UX yang mulus, dan kebersihan kode.'}
               </p>
