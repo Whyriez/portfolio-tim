@@ -2,7 +2,9 @@
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { supabase } from '@/utils/supabase/supabase';
+import { motion, AnimatePresence } from 'framer-motion';
 
+// 1. UPDATE TYPE: Tambahkan 'skills'
 type Member = {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ type Member = {
   avatar_url: string | null;
   github_url: string | null;
   linkedin_url: string | null;
+  skills?: string[]; // Field baru
 };
 
 type EditProfileModalProps = {
@@ -24,6 +27,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, member }:
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [bio, setBio] = useState('');
+  const [skills, setSkills] = useState(''); 
   
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -39,6 +43,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, member }:
       setName(member.name);
       setRole(member.role);
       setBio(member.bio || '');
+      setSkills(member.skills?.join(', ') || '');
       setImagePreview(member.avatar_url);
       setGithubUrl(member.github_url || '');
       setLinkedinUrl(member.linkedin_url || '');
@@ -60,9 +65,8 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, member }:
 
   const uploadAvatarToSupabase = async (file: File): Promise<string | null> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${member.id}-${Date.now()}.${fileExt}`; // Pake ID member biar unik
+    const fileName = `${member.id}-${Date.now()}.${fileExt}`; 
     
-    // Upload ke bucket 'avatars'
     const { error } = await supabase.storage.from('avatars').upload(fileName, file, { cacheControl: '3600', upsert: false });
     if (error) return null;
     
@@ -82,10 +86,14 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, member }:
         if (uploadedUrl) finalAvatarUrl = uploadedUrl;
       }
 
+      // Format Skills kembali menjadi Array sebelum disimpan
+      const skillsArray = skills.split(',').map(skill => skill.trim()).filter(Boolean);
+
       const { error } = await supabase.from('members').update({
         name,
         role,
         bio,
+        skills: skillsArray,
         avatar_url: finalAvatarUrl,
         github_url: githubUrl,
         linkedin_url: linkedinUrl,
@@ -102,83 +110,110 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess, member }:
     }
   };
 
-  const inputStyle = "w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400";
-  const labelStyle = "text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1 block";
+  // Class styling untuk Dark Mode UI
+  const inputStyle = "w-full px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-600";
+  const labelStyle = "text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1 block";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 max-h-[95vh] overflow-y-auto no-scrollbar">
-        
-        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Edit Profil Anda</h2>
-            <p className="text-xs text-slate-500 mt-1">Perbarui foto dan informasi diri Anda.</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="w-full max-w-2xl bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-slate-800 p-8 max-h-[95vh] overflow-y-auto no-scrollbar relative"
+        >
           
-          {/* AREA UPLOAD FOTO PROFIL (Lingkaran) */}
-          <div className="flex flex-col items-center justify-center gap-3">
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="relative w-32 h-32 rounded-full border-4 border-slate-100 bg-slate-50 hover:border-indigo-200 transition-colors cursor-pointer group overflow-hidden shadow-sm flex items-center justify-center"
-            >
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <svg className="w-10 h-10 text-slate-300" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              )}
+          <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-800/50">
+            <div>
+              <h2 className="text-xl font-bold text-white">Edit Profil Anda</h2>
+              <p className="text-xs text-slate-400 mt-1">Perbarui foto dan informasi identitas Anda di tim.</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-white hover:bg-slate-800 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            
+            {/* AREA UPLOAD FOTO PROFIL (Lingkaran) */}
+            <div className="flex flex-col items-center justify-center gap-4 relative">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-indigo-500/20 blur-2xl rounded-full pointer-events-none"></div>
               
-              {/* Overlay Hover */}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-white text-xs font-bold">GANTI FOTO</span>
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="relative w-32 h-32 rounded-full border-4 border-slate-800 bg-slate-950/50 hover:border-indigo-500/50 transition-all cursor-pointer group overflow-hidden shadow-xl flex items-center justify-center z-10"
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <svg className="w-10 h-10 text-slate-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                )}
+                
+                {/* Overlay Hover */}
+                <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-[10px] font-bold tracking-widest">GANTI FOTO</span>
+                </div>
+              </div>
+              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
+              <div>
+                <label className={labelStyle}>Nama Lengkap</label>
+                <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={inputStyle} placeholder="Cth: John Doe" />
+              </div>
+              <div>
+                <label className={labelStyle}>Role / Posisi</label>
+                <input type="text" required value={role} onChange={(e) => setRole(e.target.value)} className={inputStyle} placeholder="Cth: Backend Developer" />
               </div>
             </div>
-            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className={labelStyle}>Nama Lengkap</label>
-              <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className={inputStyle} />
+              <label className={labelStyle}>Keahlian (Skills)</label>
+              <input 
+                type="text" 
+                value={skills} 
+                onChange={(e) => setSkills(e.target.value)} 
+                className={inputStyle} 
+                placeholder="Cth: Kotlin, Python, React, Docker" 
+              />
+              <span className="text-[10px] text-slate-500 ml-1 mt-1.5 block">Pisahkan dengan tanda koma (,)</span>
             </div>
-            <div>
-              <label className={labelStyle}>Role / Posisi (Cth: Mobile Developer)</label>
-              <input type="text" required value={role} onChange={(e) => setRole(e.target.value)} className={inputStyle} />
-            </div>
-          </div>
 
-          <div>
-            <label className={labelStyle}>Bio Singkat</label>
-            <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)} className={`${inputStyle} resize-none`} placeholder="Ceritakan sedikit tentang keahlian atau minat Anda..." />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className={labelStyle}>Link GitHub</label>
-              <input type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} className={inputStyle} placeholder="https://github.com/nuralim" />
+              <label className={labelStyle}>Bio Singkat</label>
+              <textarea rows={3} value={bio} onChange={(e) => setBio(e.target.value)} className={`${inputStyle} resize-none`} placeholder="Ceritakan sedikit tentang fokus keahlian atau minat Anda..." />
             </div>
-            <div>
-              <label className={labelStyle}>Link LinkedIn</label>
-              <input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className={inputStyle} placeholder="https://linkedin.com/in/nuralim" />
-            </div>
-          </div>
 
-          <div className="flex justify-end gap-3 mt-2 pt-5 border-t border-slate-100">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors">
-              Batal
-            </button>
-            <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
-              {loading ? 'Menyimpan...' : 'Simpan Profil'}
-            </button>
-          </div>
-          
-        </form>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelStyle}>Link GitHub (Opsional)</label>
+                <input type="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} className={inputStyle} placeholder="https://github.com/..." />
+              </div>
+              <div>
+                <label className={labelStyle}>Link LinkedIn (Opsional)</label>
+                <input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className={inputStyle} placeholder="https://linkedin.com/in/..." />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-4 pt-6 border-t border-slate-800/50">
+              <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                Batal
+              </button>
+              <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_15px_-3px_rgba(79,70,229,0.4)] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 active:scale-95">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Menyimpan...
+                  </>
+                ) : 'Simpan Profil'}
+              </button>
+            </div>
+            
+          </form>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }

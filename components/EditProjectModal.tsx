@@ -2,15 +2,23 @@
 
 import { useState, useRef, ChangeEvent, useEffect } from 'react';
 import { supabase } from '@/utils/supabase/supabase';
+import { motion, AnimatePresence } from 'framer-motion';
 
+// 1. UPDATE TYPE
 type Project = {
   id: string;
   title: string;
   description: string | null;
+  motivation?: string | null; 
   tech_stack: string[];
   image_url: string | null;
+  gallery_urls?: string[]; 
   demo_url: string | null;
   repo_url: string | null;
+  competition_name?: string | null;
+  award?: string | null;
+  architecture_diagram_url?: string | null;
+  is_featured?: boolean;
 };
 
 type EditProjectModalProps = {
@@ -23,32 +31,55 @@ type EditProjectModalProps = {
 export default function EditProjectModal({ isOpen, onClose, onSuccess, project }: EditProjectModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [motivation, setMotivation] = useState(''); 
   const [techStack, setTechStack] = useState('');
   
+  const [competitionName, setCompetitionName] = useState('');
+  const [award, setAward] = useState('');
+  const [architectureUrl, setArchitectureUrl] = useState('');
+  const [isFeatured, setIsFeatured] = useState(false);
+
+  // Gambar Utama
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Gallery
+  const [existingGallery, setExistingGallery] = useState<string[]>([]); 
+  const [newGalleryFiles, setNewGalleryFiles] = useState<File[]>([]); 
+  const [newGalleryPreviews, setNewGalleryPreviews] = useState<string[]>([]); 
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   
   const [demoUrl, setDemoUrl] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Isi form dengan data proyek saat modal dibuka
   useEffect(() => {
     if (project && isOpen) {
       setTitle(project.title);
       setDescription(project.description || '');
+      setMotivation(project.motivation || ''); 
       setTechStack(project.tech_stack.join(', '));
-      setImagePreview(project.image_url); // Tampilkan gambar lama
+      setImagePreview(project.image_url);
       setDemoUrl(project.demo_url || '');
       setRepoUrl(project.repo_url || '');
-      setImageFile(null); // Reset file baru
+      
+      setCompetitionName(project.competition_name || '');
+      setAward(project.award || '');
+      setArchitectureUrl(project.architecture_diagram_url || '');
+      setIsFeatured(project.is_featured || false);
+
+      setExistingGallery(project.gallery_urls || []);
+      
+      setImageFile(null);
+      setNewGalleryFiles([]);
+      setNewGalleryPreviews([]);
     }
   }, [project, isOpen]);
 
   if (!isOpen || !project) return null;
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleMainFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setImageFile(file);
@@ -58,9 +89,28 @@ export default function EditProjectModal({ isOpen, onClose, onSuccess, project }
     }
   };
 
-  const uploadImageToSupabase = async (file: File): Promise<string | null> => {
+  const handleGalleryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setNewGalleryFiles((prev) => [...prev, ...filesArray]);
+      
+      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+      setNewGalleryPreviews((prev) => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeExistingGalleryImage = (indexToRemove: number) => {
+    setExistingGallery((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const removeNewGalleryImage = (indexToRemove: number) => {
+    setNewGalleryFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+    setNewGalleryPreviews((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const uploadSingleImage = async (file: File): Promise<string | null> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const { error } = await supabase.storage.from('proyek_images').upload(fileName, file, { cacheControl: '3600', upsert: false });
     if (error) return null;
     const { data: { publicUrl } } = supabase.storage.from('proyek_images').getPublicUrl(fileName);
@@ -72,24 +122,43 @@ export default function EditProjectModal({ isOpen, onClose, onSuccess, project }
     setLoading(true);
 
     try {
-      let finalImageUrl = project.image_url; // Default pakai URL lama
+      let finalImageUrl = project.image_url;
 
-      // Jika ada file baru yang dipilih, upload dulu
       if (imageFile) {
-        const uploadedUrl = await uploadImageToSupabase(imageFile);
+        const uploadedUrl = await uploadSingleImage(imageFile);
         if (uploadedUrl) finalImageUrl = uploadedUrl;
       }
 
+      let uploadedGalleryUrls: string[] = [];
+      if (newGalleryFiles.length > 0) {
+        const uploadPromises = newGalleryFiles.map(file => uploadSingleImage(file));
+        const newUrls = await Promise.all(uploadPromises);
+        uploadedGalleryUrls = newUrls.filter(url => url !== null) as string[];
+      }
+
+      const finalGalleryUrls = [...existingGallery, ...uploadedGalleryUrls];
       const techArray = techStack.split(',').map(tech => tech.trim()).filter(Boolean);
 
-      // UPDATE data ke Supabase berdasarkan ID
+      if (isFeatured) {
+        await supabase
+          .from('projects')
+          .update({ is_featured: false })
+          .neq('id', project.id); 
+      }
+      
       const { error } = await supabase.from('projects').update({
         title,
         description,
+        motivation: motivation || null,
         tech_stack: techArray,
         image_url: finalImageUrl,
+        gallery_urls: finalGalleryUrls,
         demo_url: demoUrl,
         repo_url: repoUrl,
+        competition_name: competitionName || null,
+        award: award || null,
+        architecture_diagram_url: architectureUrl || null,
+        is_featured: isFeatured,
       }).eq('id', project.id);
 
       if (error) throw error;
@@ -103,85 +172,173 @@ export default function EditProjectModal({ isOpen, onClose, onSuccess, project }
     }
   };
 
-  // Class styling untuk Clean Modern UI
-  const inputStyle = "w-full px-4 py-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-400";
-  const labelStyle = "text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1 block";
+  const inputStyle = "w-full px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-sm placeholder:text-slate-600";
+  const labelStyle = "text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1 block";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 max-h-[95vh] overflow-y-auto no-scrollbar">
-        
-        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Edit Proyek</h2>
-            <p className="text-xs text-slate-500 mt-1">Perbarui detail portofolio karya ini.</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="w-full max-w-3xl bg-slate-900/90 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-slate-800 p-8 max-h-[95vh] overflow-y-auto no-scrollbar relative"
+        >
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-800/50">
             <div>
-              <label className={labelStyle}>Nama Proyek <span className="text-red-500">*</span></label>
-              <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className={inputStyle} />
+              <h2 className="text-xl font-bold text-white">Edit Proyek</h2>
+              <p className="text-xs text-slate-400 mt-1">Perbarui detail portofolio karya ini.</p>
             </div>
-            <div>
-              <label className={labelStyle}>Tech Stack</label>
-              <input type="text" value={techStack} onChange={(e) => setTechStack(e.target.value)} className={inputStyle} />
-              <span className="text-[10px] text-slate-400 ml-1 mt-1 block">Pisahkan dengan koma</span>
-            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-white hover:bg-slate-800 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
 
-          <div>
-            <label className={labelStyle}>Gambar Proyek</label>
-            <div className="w-full p-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center gap-4 min-h-[160px]">
-              {imagePreview && <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg shadow-sm border border-slate-200" />}
-              <button 
-                type="button" 
-                onClick={() => fileInputRef.current?.click()} 
-                className="px-5 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors shadow-sm"
-              >
-                Ganti Gambar Baru
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelStyle}>Nama Proyek <span className="text-red-500">*</span></label>
+                <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className={inputStyle} />
+              </div>
+              <div>
+                <label className={labelStyle}>Tech Stack</label>
+                <input type="text" value={techStack} onChange={(e) => setTechStack(e.target.value)} className={inputStyle} />
+                <span className="text-[10px] text-slate-500 ml-1 mt-1 block">Pisahkan dengan koma</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-indigo-500/10 p-5 rounded-2xl border border-indigo-500/20 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-2xl rounded-full pointer-events-none"></div>
+              <div className="relative z-10">
+                <label className={labelStyle}>Nama Lomba / Event</label>
+                <input type="text" value={competitionName} onChange={(e) => setCompetitionName(e.target.value)} className={inputStyle} />
+              </div>
+              <div className="relative z-10">
+                <label className={labelStyle}>Penghargaan (Jika Ada)</label>
+                <input type="text" value={award} onChange={(e) => setAward(e.target.value)} className={inputStyle} />
+              </div>
+            </div>
+
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer mt-1 mb-2 bg-slate-950/50 p-4 rounded-xl border border-slate-800 hover:border-indigo-500/50 transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={isFeatured} 
+                  onChange={(e) => setIsFeatured(e.target.checked)} 
+                  className="w-5 h-5 text-indigo-500 bg-slate-900 border-slate-700 rounded focus:ring-indigo-500/50 focus:ring-offset-slate-900" 
+                />
+                <span className="text-sm font-semibold text-slate-300">Jadikan Proyek Unggulan (Tampil Paling Atas)</span>
+              </label>
+            </div>
+
+            {/* GAMBAR UTAMA */}
+            <div>
+              <label className={labelStyle}>Gambar Proyek Utama</label>
+              <div className="w-full p-4 rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/50 flex flex-col items-center justify-center gap-4 min-h-[160px]">
+                {imagePreview && <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover rounded-lg shadow-sm border border-slate-700" />}
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="px-5 py-2 rounded-lg text-xs font-semibold text-white bg-slate-800 border border-slate-700 hover:bg-indigo-500/20 hover:text-indigo-300 hover:border-indigo-500/30 transition-colors shadow-sm"
+                >
+                  Ganti Gambar Utama
+                </button>
+              </div>
+              <input type="file" accept="image/*" ref={fileInputRef} onChange={handleMainFileChange} className="hidden" />
+            </div>
+
+            {/* EDIT GALLERY */}
+            <div className="bg-slate-950/30 p-5 rounded-2xl border border-slate-800">
+              <label className={labelStyle}>Gallery Proyek</label>
+              <div className="flex flex-wrap gap-3 mt-3">
+                
+                {/* Gambar Gallery yang sudah ada (DB) */}
+                {existingGallery.map((url, index) => (
+                  <div key={`exist-${index}`} className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-700 group">
+                    <img src={url} alt={`Existing Gallery ${index}`} className="w-full h-full object-cover" />
+                    <button 
+                      type="button"
+                      onClick={() => removeExistingGalleryImage(index)}
+                      className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                      title="Hapus gambar ini"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                ))}
+
+                {/* Gambar Gallery Baru (belum diupload) */}
+                {newGalleryPreviews.map((preview, index) => (
+                  <div key={`new-${index}`} className="relative w-24 h-24 rounded-lg overflow-hidden border border-emerald-500 border-2 group shadow-sm">
+                    <div className="absolute top-0 right-0 bg-emerald-500 text-slate-900 text-[8px] font-bold px-1.5 py-0.5 rounded-bl-lg z-10">BARU</div>
+                    <img src={preview} alt={`New Gallery ${index}`} className="w-full h-full object-cover" />
+                    <button 
+                      type="button"
+                      onClick={() => removeNewGalleryImage(index)}
+                      className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 backdrop-blur-sm"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
+                ))}
+                
+                {/* Tombol Tambah Gallery */}
+                <div 
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/10 cursor-pointer transition-colors"
+                >
+                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  <span className="text-[10px] font-bold text-center">Tambah<br/>Gambar</span>
+                </div>
+              </div>
+              <input type="file" accept="image/*" multiple ref={galleryInputRef} onChange={handleGalleryChange} className="hidden" />
+            </div>
+
+            <div>
+              <label className={labelStyle}>Deskripsi Tinjauan Proyek</label>
+              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputStyle} resize-none`} />
+            </div>
+
+            <div>
+              <label className={labelStyle}>Mengapa Kami Membangun Ini? (Latar Belakang)</label>
+              <textarea rows={3} value={motivation} onChange={(e) => setMotivation(e.target.value)} className={`${inputStyle} resize-none`} placeholder="Sistem ini dibangun untuk memecahkan masalah..." />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelStyle}>Link Demo (Opsional)</label>
+                <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} className={inputStyle} />
+              </div>
+              <div>
+                <label className={labelStyle}>Link Repo / GitHub</label>
+                <input type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} className={inputStyle} />
+              </div>
+            </div>
+
+            <div>
+               <label className={labelStyle}>Link Diagram Arsitektur (Opsional)</label>
+               <input type="url" value={architectureUrl} onChange={(e) => setArchitectureUrl(e.target.value)} className={inputStyle} />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-2 pt-6 border-t border-slate-800/50">
+              <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+                Batal
+              </button>
+              <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_15px_-3px_rgba(79,70,229,0.4)] transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 active:scale-95">
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Menyimpan...
+                  </>
+                ) : 'Simpan Perubahan'}
               </button>
             </div>
-            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-          </div>
-
-          <div>
-            <label className={labelStyle}>Deskripsi Singkat</label>
-            <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputStyle} resize-none`} />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className={labelStyle}>Link Demo (Opsional)</label>
-              <input type="url" value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)} className={inputStyle} />
-            </div>
-            <div>
-              <label className={labelStyle}>Link Repo / GitHub</label>
-              <input type="url" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} className={inputStyle} />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-4 pt-5 border-t border-slate-100">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors">
-              Batal
-            </button>
-            <button type="submit" disabled={loading} className="px-6 py-2.5 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2">
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  Menyimpan...
-                </>
-              ) : 'Simpan Perubahan'}
-            </button>
-          </div>
-          
-        </form>
+            
+          </form>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }
