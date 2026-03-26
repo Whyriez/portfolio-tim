@@ -9,6 +9,7 @@ import EditProfileModal from '@/components/EditProfileModal';
 import { motion } from 'framer-motion';
 import { LogOut, Plus, Trophy, Star, Code2 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../page';
+import Image from 'next/image';
 
 // Tipe Data sesuai skema database
 type Member = {
@@ -132,7 +133,7 @@ export default function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 pb-12 font-sans relative overflow-hidden selection:bg-indigo-500/30 selection:text-indigo-200">
-            
+
             {/* --- BACKGROUND GLOW EFFECTS --- */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/10 blur-[120px]"></div>
@@ -143,8 +144,14 @@ export default function DashboardPage() {
                 {/* --- HEADER CLEAN & MODERN --- */}
                 <header className="bg-slate-950/80 backdrop-blur-md border-b border-slate-800/50 sticky top-0 z-40 px-6 py-4 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-500/20">
-                            S
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-indigo-500/20">
+                            <Image
+                                src="/logo.png"
+                                alt="Logo"
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-white leading-tight">SkillSync Workspace</h1>
@@ -168,7 +175,7 @@ export default function DashboardPage() {
 
                     {/* --- KOLOM KIRI: PROFIL SAYA (Lebar 4 Kolom) --- */}
                     <section className="xl:col-span-4 h-fit">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5 }}
@@ -186,7 +193,7 @@ export default function DashboardPage() {
                                     className="w-full h-full rounded-full object-cover border-4 border-slate-900 shadow-xl relative z-10 bg-slate-800"
                                 />
                             </div>
-                            
+
                             <h2 className="text-2xl font-extrabold text-white relative z-10">{member?.name}</h2>
                             <span className="px-4 py-1.5 mt-2 text-xs font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 rounded-full relative z-10">
                                 {member?.role}
@@ -227,7 +234,7 @@ export default function DashboardPage() {
 
                     {/* --- KOLOM KANAN: PROYEK TIM (Lebar 8 Kolom) --- */}
                     <section className="xl:col-span-8">
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
@@ -259,7 +266,7 @@ export default function DashboardPage() {
 
                                 {projects.map((project) => (
                                     <div key={project.id} className="group flex flex-col bg-slate-950/50 border border-slate-800 rounded-2xl overflow-hidden hover:border-indigo-500/50 transition-all duration-300 relative">
-                                        
+
                                         {/* Badge Unggulan / Award */}
                                         <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
                                             {project.is_featured && (
@@ -282,7 +289,7 @@ export default function DashboardPage() {
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-80"></div>
                                         </div>
-                                        
+
                                         <div className="p-6 flex flex-col flex-grow relative z-10 -mt-8">
                                             <h3 className="text-xl font-bold text-white group-hover:text-indigo-400 transition-colors drop-shadow-md">{project.title}</h3>
                                             <p className="text-sm text-slate-400 mt-2 line-clamp-2 flex-grow">{project.description}</p>
