@@ -26,11 +26,13 @@ export default function AddProjectModal({ isOpen, onClose, onSuccess, memberId }
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingMain, setIsDraggingMain] = useState(false); // State Drag Gambar Utama
 
   // State Baru: Gallery (Multiple Images)
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingGallery, setIsDraggingGallery] = useState(false); // State Drag Gallery
 
   const [demoUrl, setDemoUrl] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
@@ -38,25 +40,48 @@ export default function AddProjectModal({ isOpen, onClose, onSuccess, memberId }
 
   if (!isOpen) return null;
 
-  // Handler Gambar Utama
+  // --- HANDLER GAMBAR UTAMA ---
+  const processMainImage = (file: File) => {
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const handleMainImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
+      processMainImage(e.target.files[0]);
     }
   };
 
-  // Handler Gallery (Multiple)
+  const handleMainDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingMain(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processMainImage(e.dataTransfer.files[0]);
+    }
+  };
+
+  // --- HANDLER GAMBAR GALLERY ---
+  const processGalleryImages = (files: FileList | File[]) => {
+    const filesArray = Array.from(files);
+    setGalleryFiles((prev) => [...prev, ...filesArray]);
+    
+    const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+    setGalleryPreviews((prev) => [...prev, ...newPreviews]);
+  };
+
   const handleGalleryChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setGalleryFiles((prev) => [...prev, ...filesArray]);
-      
-      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
-      setGalleryPreviews((prev) => [...prev, ...newPreviews]);
+      processGalleryImages(e.target.files);
+    }
+  };
+
+  const handleGalleryDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingGallery(false);
+    if (e.dataTransfer.files) {
+      processGalleryImages(e.dataTransfer.files);
     }
   };
 
@@ -234,28 +259,37 @@ export default function AddProjectModal({ isOpen, onClose, onSuccess, memberId }
               </label>
             </div>
 
-            {/* UPLOAD GAMBAR UTAMA */}
+            {/* UPLOAD GAMBAR UTAMA (DRAG & DROP) */}
             <div>
               <label className={labelStyle}>Gambar Proyek Utama <span className="text-red-500">*</span></label>
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full p-4 rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/50 hover:bg-slate-900/80 hover:border-indigo-500/50 transition-colors cursor-pointer flex flex-col items-center justify-center text-center gap-2 min-h-[140px] group"
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingMain(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDraggingMain(false); }}
+                onDrop={handleMainDrop}
+                className={`w-full p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2 min-h-[140px] group ${
+                  isDraggingMain 
+                    ? 'border-indigo-500 bg-indigo-500/10' 
+                    : 'border-slate-700 bg-slate-950/50 hover:bg-slate-900/80 hover:border-indigo-500/50'
+                }`}
               >
                 {imagePreview ? (
                   <img src={imagePreview} alt="Preview" className="w-full h-32 object-cover rounded-lg shadow-sm" />
                 ) : (
                   <>
-                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors">
-                      <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${isDraggingMain ? 'bg-indigo-500/30' : 'bg-slate-800 group-hover:bg-indigo-500/20'}`}>
+                      <svg className={`w-5 h-5 ${isDraggingMain ? 'text-indigo-300' : 'text-indigo-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     </div>
-                    <p className="text-sm font-semibold text-slate-400 group-hover:text-indigo-300 transition-colors">Upload Gambar Utama</p>
+                    <p className={`text-sm font-semibold transition-colors ${isDraggingMain ? 'text-indigo-300' : 'text-slate-400 group-hover:text-indigo-300'}`}>
+                      {isDraggingMain ? 'Lepaskan Gambar Di Sini' : 'Klik atau Drag & Drop Gambar Utama'}
+                    </p>
                   </>
                 )}
               </div>
               <input type="file" accept="image/*" ref={fileInputRef} onChange={handleMainImageChange} className="hidden" />
             </div>
 
-            {/* UPLOAD GAMBAR GALLERY (MULTIPLE) */}
+            {/* UPLOAD GAMBAR GALLERY (MULTIPLE) DENGAN DRAG & DROP */}
             <div className="bg-slate-950/30 p-5 rounded-2xl border border-slate-800">
               <label className={labelStyle}>Gallery Proyek (Bisa lebih dari 1 gambar)</label>
               <div className="flex flex-wrap gap-3 mt-3">
@@ -274,10 +308,19 @@ export default function AddProjectModal({ isOpen, onClose, onSuccess, memberId }
                 
                 <div 
                   onClick={() => galleryInputRef.current?.click()}
-                  className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/10 cursor-pointer transition-colors"
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsDraggingGallery(false); }}
+                  onDrop={handleGalleryDrop}
+                  className={`w-24 h-24 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                    isDraggingGallery
+                      ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300'
+                      : 'border-slate-700 text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 hover:bg-indigo-500/10'
+                  }`}
                 >
                   <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                  <span className="text-[10px] font-bold">Tambah</span>
+                  <span className="text-[10px] font-bold text-center">
+                    {isDraggingGallery ? 'Drop!' : 'Tambah / Drag'}
+                  </span>
                 </div>
               </div>
               <input type="file" accept="image/*" multiple ref={galleryInputRef} onChange={handleGalleryChange} className="hidden" />
