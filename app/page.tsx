@@ -325,9 +325,17 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: idx * 0.2 }}
                   key={member.id}
-                  className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-8 hover:border-indigo-500/30 hover:bg-slate-800/50 transition-all duration-500 group"
+                  className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-8 hover:border-indigo-500/50 hover:bg-slate-800/50 transition-all duration-500 group relative"
                 >
-                  <div className="relative w-32 h-32 mx-auto mb-6">
+                  {/* Tombol CTA Jelas di Pojok Kanan Atas */}
+                  <Link 
+                    href={`/team/${member.id}`} 
+                    className="absolute top-6 right-6 px-3.5 py-1.5 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-full backdrop-blur-md transition-all flex items-center gap-1.5 text-[10px] font-bold border border-indigo-500/20 uppercase tracking-wider z-10 shadow-sm"
+                  >
+                    Profil <ArrowRight size={12} />
+                  </Link>
+
+                  <div className="relative w-32 h-32 mx-auto mb-6 mt-4">
                     <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-full blur-xl opacity-20 group-hover:opacity-50 transition-opacity duration-500"></div>
                     <img
                       src={member.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'}
@@ -353,12 +361,12 @@ export default function LandingPage() {
 
                     <div className="flex justify-center gap-3">
                       {member.github_url && (
-                        <a href={member.github_url} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-900 transition-all">
+                        <a href={member.github_url} target="_blank" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-900 transition-all">
                           <GithubIcon size={18} />
                         </a>
                       )}
                       {member.linkedin_url && (
-                        <a href={member.linkedin_url} className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all">
+                        <a href={member.linkedin_url} target="_blank" className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all">
                           <LinkedinIcon size={18} />
                         </a>
                       )}

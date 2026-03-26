@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabase/supabase';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, LayoutTemplate, Trophy, Rocket, Code2, Images, X } from 'lucide-react';
+import { ArrowLeft, ExternalLink, LayoutTemplate, Trophy, Rocket, Code2, Images, X, User } from 'lucide-react';
 import { GithubIcon } from '@/app/page';
 
 export default function ProjectDetail() {
@@ -13,33 +13,46 @@ export default function ProjectDetail() {
   const id = params?.id as string;
   
   const [project, setProject] = useState<any>(null);
+  const [authors, setAuthors] = useState<any[]>([]); // STATE BARU: Untuk menyimpan data pembuat karya
   const [loading, setLoading] = useState(true);
 
-  // STATE BARU: Menyimpan URL gambar yang sedang di-klik untuk popup
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchProject() {
+    async function fetchProjectData() {
       if (!id) return;
       try {
-        const { data, error } = await supabase
+        // 1. Ambil Data Proyek
+        const { data: projectData, error: projectError } = await supabase
           .from('projects')
           .select('*')
           .eq('id', id)
           .single();
 
-        if (error) throw error;
-        setProject(data);
+        if (projectError) throw projectError;
+        setProject(projectData);
+
+        // 2. Ambil Data Anggota (Authors) melalui tabel relasi member_projects
+        const { data: relationData, error: relationError } = await supabase
+          .from('member_projects')
+          .select('members(*)')
+          .eq('project_id', id);
+
+        if (!relationError && relationData) {
+          // Supabase akan mengembalikan array object { members: { ...data } }
+          const fetchedAuthors = relationData.map((rel: any) => rel.members).filter(Boolean);
+          setAuthors(fetchedAuthors);
+        }
+
       } catch (error) {
         console.error("Error fetching project:", error);
       } finally {
         setLoading(false);
       }
     }
-    fetchProject();
+    fetchProjectData();
   }, [id]);
 
-  // Efek untuk mengunci scroll saat popup terbuka
   useEffect(() => {
     if (selectedImage) {
       document.body.style.overflow = 'hidden';
@@ -70,25 +83,22 @@ export default function ProjectDetail() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 selection:text-indigo-200 pb-20">
       
-      {/* --- POPUP LIGHTBOX (Hanya muncul jika ada gambar yang di-klik) --- */}
+      {/* --- POPUP LIGHTBOX --- */}
       <AnimatePresence>
         {selectedImage && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setSelectedImage(null)} // Tutup popup jika area kosong di-klik
+            onClick={() => setSelectedImage(null)} 
             className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 cursor-zoom-out"
           >
-            {/* Tombol Tutup Silang (X) */}
             <button 
               onClick={() => setSelectedImage(null)}
               className="absolute top-6 right-6 md:top-8 md:right-8 w-12 h-12 bg-slate-900/50 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-full flex items-center justify-center transition-colors border border-slate-700/50 backdrop-blur-md"
             >
               <X size={24} />
             </button>
-
-            {/* Gambar Besar */}
             <motion.img 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -97,7 +107,7 @@ export default function ProjectDetail() {
               src={selectedImage} 
               alt="Gambar diperbesar" 
               className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)]"
-              onClick={(e) => e.stopPropagation()} // Mencegah klik pada gambar menutup popup
+              onClick={(e) => e.stopPropagation()} 
             />
           </motion.div>
         )}
@@ -159,7 +169,6 @@ export default function ProjectDetail() {
             </div>
           </motion.div>
 
-          {/* Featured Image (Bisa diklik untuk memperbesar) */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             animate={{ opacity: 1, y: 0 }} 
@@ -183,7 +192,7 @@ export default function ProjectDetail() {
       <main className="container mx-auto px-6 py-20 max-w-5xl">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           
-          {/* Kolom Kiri: Main Content (Problem, Solution, Architecture, Gallery) */}
+          {/* Kolom Kiri: Main Content */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }} 
             whileInView={{ opacity: 1, x: 0 }} 
@@ -191,7 +200,6 @@ export default function ProjectDetail() {
             transition={{ duration: 0.6 }}
             className="md:col-span-2 space-y-12"
           >
-            {/* Tinjauan Proyek */}
             <section>
               <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
                 <Code2 className="text-indigo-400" /> Tinjauan Proyek
@@ -203,7 +211,6 @@ export default function ProjectDetail() {
               </div>
             </section>
 
-            {/* Architecture Section */}
             {project.architecture_diagram_url && (
               <section className="pt-8 border-t border-slate-800/50">
                 <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
@@ -230,7 +237,6 @@ export default function ProjectDetail() {
               </section>
             )}
 
-            {/* Gallery Section */}
             {project.gallery_urls && project.gallery_urls.length > 0 && (
               <section className="pt-8 border-t border-slate-800/50">
                 <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
@@ -259,10 +265,9 @@ export default function ProjectDetail() {
                 </div>
               </section>
             )}
-
           </motion.div>
 
-          {/* Kolom Kanan: Meta Info & Tech Stack */}
+          {/* Kolom Kanan: Meta Info, Authors, Tech Stack */}
           <motion.div 
             initial={{ opacity: 0, x: 30 }} 
             whileInView={{ opacity: 1, x: 0 }} 
@@ -270,6 +275,31 @@ export default function ProjectDetail() {
             transition={{ duration: 0.6 }}
             className="space-y-8"
           >
+            
+            {/* KARTU BARU: DIKERJAKAN OLEH (AUTHORS) */}
+            {authors.length > 0 && (
+              <div className="bg-slate-900/80 border border-slate-700/80 rounded-3xl p-8 backdrop-blur-md shadow-xl">
+                <h3 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
+                  <User className="text-blue-400" size={20} /> Kontributor
+                </h3>
+                <div className="flex flex-col gap-4">
+                  {authors.map((author, index) => (
+                    <div key={index} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-700/50">
+                      <img 
+                        src={author.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fallback'} 
+                        alt={author.name} 
+                        className="w-12 h-12 rounded-full object-cover border-2 border-indigo-500/30"
+                      />
+                      <div>
+                        <p className="text-slate-200 font-bold text-sm">{author.name}</p>
+                        <p className="text-indigo-400 text-xs font-medium">{author.role}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="bg-slate-900/50 border border-slate-800/80 rounded-3xl p-8 backdrop-blur-sm">
               <h3 className="text-xl font-bold text-white mb-6">Teknologi Inti</h3>
               <div className="flex flex-col gap-3">
@@ -288,6 +318,7 @@ export default function ProjectDetail() {
                 {project.motivation || 'Sebagai bagian dari dedikasi tim, proyek ini dirancang khusus untuk memenuhi standar kompetisi tingkat tinggi, menitikberatkan pada performa, UX yang mulus, dan kebersihan kode.'}
               </p>
             </div>
+            
           </motion.div>
 
         </div>
