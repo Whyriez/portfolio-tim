@@ -191,7 +191,7 @@ export default function LandingPage() {
                     {/* TOMBOL CASE STUDY & LAINNYA DI SINI */}
                     <div className="flex flex-wrap gap-3 mt-4">
                       <Link href={`/projects/${featuredProject.id}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] transition-all flex items-center gap-2 group/btn">
-                        Baca Case Study <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                        Lihat Detail <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                       </Link>
                       {featuredProject.demo_url && (
                         <a href={featuredProject.demo_url} target="_blank" className="px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center gap-2">
@@ -298,7 +298,7 @@ export default function LandingPage() {
                       </div>
                       <div className="flex gap-3 pt-4 border-t border-slate-800/50">
                         <Link href={`/projects/${project.id}`} className="flex-1 text-center py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold transition-colors shadow-lg shadow-indigo-500/25">
-                          Baca Case Study Lengkap
+                          Lihat Detail
                         </Link>
                       </div>
                     </div>
