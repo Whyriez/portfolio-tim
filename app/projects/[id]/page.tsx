@@ -234,10 +234,10 @@ export default function ProjectDetail() {
             {project.gallery_urls && project.gallery_urls.length > 0 && (
               <section className="pt-8 border-t border-slate-800/50">
                 <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
-                  <Images className="text-emerald-400" /> Galeri Sistem
+                  <Images className="text-emerald-400" /> Dokumentasi Karya
                 </h2>
                 <p className="text-slate-400 mb-6">
-                  Beberapa tangkapan layar antarmuka pengguna dan fitur-fitur dari aplikasi.
+                  Beberapa tangkapan layar lainnya.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {project.gallery_urls.map((url: string, index: number) => (
