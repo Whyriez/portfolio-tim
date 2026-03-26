@@ -92,9 +92,9 @@ export default function LandingPage() {
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
               className="text-5xl md:text-8xl font-extrabold tracking-tight text-white mb-6 leading-tight"
             >
-              Building the Future <br />
+              Membangun Masa Depan <br />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-violet-400 to-blue-400">
-                One Line at a Time.
+                Langkah demi Langkah.
               </span>
             </motion.h1>
 
@@ -133,9 +133,9 @@ export default function LandingPage() {
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
           >
             {[
-              { icon: <Users size={24} className="text-blue-400" />, title: `${members.length} Core Members`, desc: "Ahli di bidang spesifik masing-masing" },
-              { icon: <Trophy size={24} className="text-yellow-400" />, title: `${projects.filter(p => p.award).length} Awards Won`, desc: "Prestasi yang telah diraih tim" },
-              { icon: <Code2 size={24} className="text-emerald-400" />, title: `${projects.length} Total Projects`, desc: "Sistem kompleks yang diselesaikan" },
+              { icon: <Users size={24} className="text-blue-400" />, title: `${members.length} Anggota Inti`, desc: "Ahli di bidang spesifik masing-masing" },
+              { icon: <Trophy size={24} className="text-yellow-400" />, title: `${projects.filter(p => p.award).length} Penghargaan yang Diperoleh`, desc: "Prestasi yang telah diraih tim" },
+              { icon: <Code2 size={24} className="text-emerald-400" />, title: `${projects.length} Jumlah Proyek`, desc: "Sistem kompleks yang diselesaikan" },
             ].map((item, i) => (
               <div key={i} className="p-8 bg-slate-900/40 backdrop-blur-md border border-slate-800/50 rounded-3xl hover:bg-slate-800/50 transition-colors group">
                 <div className="w-14 h-14 rounded-2xl bg-slate-800/80 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">{item.icon}</div>
@@ -152,7 +152,7 @@ export default function LandingPage() {
             <div className="container mx-auto px-6">
               <div className="mb-12">
                 <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 flex items-center gap-3">
-                  <Star className="text-yellow-400" size={36} fill="currentColor" /> Spotlight
+                  <Star className="text-yellow-400" size={36} fill="currentColor" /> Sorotan
                 </h2>
                 <p className="text-slate-400 text-lg">Proyek unggulan dan kebanggaan tim kami.</p>
               </div>
@@ -313,7 +313,7 @@ export default function LandingPage() {
         <section id="team" className="py-24 relative">
           <div className="container mx-auto px-6">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">The Brains Behind</h2>
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Tim di Balik SkillSync</h2>
               <div className="w-24 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500 mx-auto rounded-full"></div>
             </div>
 
@@ -328,8 +328,8 @@ export default function LandingPage() {
                   className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-8 hover:border-indigo-500/50 hover:bg-slate-800/50 transition-all duration-500 group relative"
                 >
                   {/* Tombol CTA Jelas di Pojok Kanan Atas */}
-                  <Link 
-                    href={`/team/${member.id}`} 
+                  <Link
+                    href={`/team/${member.id}`}
                     className="absolute top-6 right-6 px-3.5 py-1.5 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-full backdrop-blur-md transition-all flex items-center gap-1.5 text-[10px] font-bold border border-indigo-500/20 uppercase tracking-wider z-10 shadow-sm"
                   >
                     Profil <ArrowRight size={12} />
