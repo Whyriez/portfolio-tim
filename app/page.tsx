@@ -158,7 +158,7 @@ export default function LandingPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-6 h-auto md:h-[600px]">
 
-                {/* Main Feature Card - DITAMBAHKAN min-h-[500px] md:min-h-0 UNTUK MOBILE FIX */}
+                {/* Main Feature Card */}
                 <motion.div
                   initial={{ opacity: 0, x: -50 }}
                   whileInView={{ opacity: 1, x: 0 }}
@@ -186,7 +186,12 @@ export default function LandingPage() {
                     <p className="text-slate-300 text-lg max-w-xl mb-6 line-clamp-2">
                       {featuredProject.description}
                     </p>
-                    <div className="flex flex-wrap gap-3">
+                    
+                    {/* TOMBOL CASE STUDY & LAINNYA DI SINI */}
+                    <div className="flex flex-wrap gap-3 mt-4">
+                      <Link href={`/projects/${featuredProject.id}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-500 shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] transition-all flex items-center gap-2 group/btn">
+                        Baca Case Study <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+                      </Link>
                       {featuredProject.demo_url && (
                         <a href={featuredProject.demo_url} target="_blank" className="px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center gap-2">
                           Live Demo <ExternalLink size={16} />
@@ -194,10 +199,11 @@ export default function LandingPage() {
                       )}
                       {featuredProject.architecture_diagram_url && (
                         <a href={featuredProject.architecture_diagram_url} target="_blank" className="px-6 py-3 bg-slate-800/80 text-white backdrop-blur-md border border-slate-700 rounded-xl font-bold hover:bg-slate-700 transition-colors flex items-center gap-2">
-                          <LayoutTemplate size={16} /> System Architecture
+                          <LayoutTemplate size={16} /> Arsitektur
                         </a>
                       )}
                     </div>
+
                   </div>
                 </motion.div>
 
